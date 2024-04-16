@@ -5,7 +5,7 @@ load("Data/Pb_all.rda")
 summary(Pb_all)
 
 #### a ####
-
+Pb_all <- mutate(Pb_all, region = relevel(region, "Norrbotten"))
 Pb_log_region<- lm(log(Pb) ~ I(year - 1975)+ region, data = Pb_all)
 summary(Pb_log_region)
 ggplot(Pb_all, aes(x = year, y = log(Pb)))+ facet_wrap(~ region) + geom_point()
