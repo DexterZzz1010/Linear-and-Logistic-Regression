@@ -34,12 +34,37 @@ qt(p = 0.05/2,
 
 abs(tvalue)
 
-
 ####  d  ####
 # predict
 new_data <- data.frame(year = 2015)
-predicted_values <- predict(Pb_log_lm, newdata = new_data)
-print(predicted_values)
+predicted_with_confidence <- predict(Pb_log_lm, newdata = new_data, interval = "confidence")
+print(predicted_with_confidence)
+
+exp_fit <- exp(predicted_with_confidence[,"fit"])
+exp_lwr <- exp(predicted_with_confidence[,"lwr"])
+exp_upr <- exp(predicted_with_confidence[,"upr"])
+
+# 输出结果
+predicted_with_confidence_exp <- data.frame(
+  fit = exp_fit,
+  lwr = exp_lwr,
+  upr = exp_upr
+)
+print(predicted_with_confidence_exp)
+
+
+predicted_with_prediction <- predict(Pb_log_lm, newdata = new_data, interval = "prediction")
+print(predicted_with_prediction)
+
+exp_prediction_lwr <- exp(predicted_with_prediction[,"lwr"])
+exp_prediction_upr <- exp(predicted_with_prediction[,"upr"])
+
+predicted_with_prediction_exp <- data.frame(
+  lwr = exp_prediction_lwr,
+  upr = exp_prediction_upr
+)
+print(predicted_with_prediction_exp)
+
 
 ####  e  ####
 
