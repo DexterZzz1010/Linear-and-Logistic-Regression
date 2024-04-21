@@ -21,6 +21,8 @@ confint(model_1b)
 # P-value is very small ~ 0, smaller than alpha = 0.05
 # we reject H0, vehicles have an impact on PM10
 
+# b #####
+
 coast <- factor(data$Coastal, labels = c("No", "Yes"))
 data <- mutate(data, Coastal = coast) # 替代原来的Coastal
 data$Part <- factor(data$Part, labels = c("Gotaland", "Svealand", "Norrland"))
