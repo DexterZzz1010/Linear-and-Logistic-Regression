@@ -16,10 +16,11 @@ kommuner <- mutate(kommuner, Coastal = relevel(Coastal,"Yes"))
 
 kommuner <-
   mutate(kommuner, NewParts =
-           as.numeric(Part == "Gotaland" & Coastal == "No") +
-           2*as.numeric(Part == "Svealand" & Coastal == "No") +
-           3*as.numeric(Part == "Norrland" | Coastal == "Yes"))
-kommuner$NewParts <- factor(kommuner$NewParts, labels = c("GotalandNo", "SvealandNo", "NorrlandYes"))
+           as.numeric(Part == "Gotaland"| Coastal == "Yes") +
+           3*as.numeric(Part == "Svealand"  & Coastal == "No") +
+           4*as.numeric(Part == "Norrland" & Coastal == "No")+
+           5*as.numeric(Part == "Norrland" & Coastal == "Yes"))
+kommuner$NewParts <- factor(kommuner$NewParts, labels = c("GotalorYes", "SvealandNo","NorrlandandNo", "NorrlandYes"))
 model_2e <- lm(log(PM10)~log(Vehicles)+log(Higheds)+Children+log(Income)+log(GRP)+NewParts, data=kommuner)
 summary(model_2e)
 ## leverage #####
@@ -216,29 +217,30 @@ ggplot(kommuner_excl_pred, aes(x = fit, y = sqrt(abs(r)))) +
 remove <- c("0481 Oxelösund", "1082 Karlshamn", "0861 Mönsterås",
                            "2523 Gällivare", "1480 Göteborg", "2584 Kiruna",
                            "1484 Lysekil", "1761 Hammarö", "2514 Kalix",
-                           "1882 Askersund", "2284 Örnsköldsvik","1471 Götene",
+                           "1882 Askersund", "2284 Örnsköldsvik","1764 Grums",
             "2262 Timrå","1460 Bengtsfors","0980 Gotland",
-                           "1494 Lidköping","1781 Kristinehamn")
+                           "1494 Lidköping","1781 Kristinehamn","1885 Lindesberg",
+            "1272 Bromölla","0319 Älvkarleby")
 
 kommuner_ <- kommuner %>%
   filter(!Kommun %in% remove)
-kommuner_excl_lm <- update(model_2e, data = kommuner_)
+model_3d <- update(model_2e, data = kommuner_)
 kommuner_pred_ <- mutate(kommuner_,
-                        yhat = predict(kommuner_excl_lm),
-                        r = rstudent(kommuner_excl_lm),
-                        v = hatvalues(kommuner_excl_lm),
-                        D = cooks.distance(kommuner_excl_lm))
+                        yhat = predict(model_3d),
+                        r = rstudent(model_3d),
+                        v = hatvalues(model_3d),
+                        D = cooks.distance(model_3d))
 kommuner_pred_excl_ <- mutate(
   kommuner_pred_,
-  df0 = dfbetas(kommuner_excl_lm)[, "(Intercept)"],
-  df1 = dfbetas(kommuner_excl_lm)[, "log(Vehicles)"],
-  df2 = dfbetas(kommuner_excl_lm)[, "log(Higheds)"],
-  df3 = dfbetas(kommuner_excl_lm)[, "Children"],
-  df4 = dfbetas(kommuner_excl_lm)[, "log(Income)"],
-  df5 = dfbetas(kommuner_excl_lm)[, "log(GRP)"],
-  fit = predict(kommuner_excl_lm),
-  r = rstudent(kommuner_excl_lm),
-  D = cooks.distance(kommuner_excl_lm))
+  df0 = dfbetas(model_3d)[, "(Intercept)"],
+  df1 = dfbetas(model_3d)[, "log(Vehicles)"],
+  df2 = dfbetas(model_3d)[, "log(Higheds)"],
+  df3 = dfbetas(model_3d)[, "Children"],
+  df4 = dfbetas(model_3d)[, "log(Income)"],
+  df5 = dfbetas(model_3d)[, "log(GRP)"],
+  fit = predict(model_3d),
+  r = rstudent(model_3d),
+  D = cooks.distance(model_3d))
 
 # Get municipality with high residuals
 high_residuals_excl <- filter(kommuner_pred_excl_, abs(r) > 3)
@@ -259,8 +261,70 @@ ggplot(kommuner_pred_excl_, aes(x = fit, y = sqrt(abs(r)))) +
   scale_color_manual(values = c("|r*|>3" = "red"))
 
 # summary & confint of both models
-summary(kommuner_excl_lm)
-confint(kommuner_excl_lm)
+summary(model_3d)
+confint(model_3d)
 
 summary(model_2e)
 confint(model_2e)
+
+
+# 3(e). Variable selection.
+
+# prepare models for stepwise selection
+model_null <- lm(log(PM10) ~ 1, data = kommuner_)
+model_null_sum <- summary(model_null)
+
+model_1b <- lm(log(PM10) ~ log(Vehicles), data = kommuner_)
+model_1b_sum <- summary(model_1b)
+
+model_2c <- lm(log(PM10)~ log(Vehicles) + NewParts, data=kommuner_)
+model_2c_sum <- summary(model_2c)
+
+model_3d <- update(model_2e, data = kommuner_)
+model_3d_sum <- summary(model_3d)
+
+# AIC stepwise selection
+step_model_aic <- step(model_1b,
+                       scope = list(lower = model_null, upper = model_3d),
+                       direction = "both",
+                       trace = TRUE,  # trace=TRUE detail information for every steps
+                       k = 2)  # k=2 means using AIC
+
+summary(step_model_aic)
+
+
+# BIC stepwise selection
+step_model_bic <- step(model_1b,
+                       scope = list(lower = model_null, upper = model_3d),
+                       direction = "both",
+                       trace = TRUE,
+                       k =  log(nobs(model_3d)))  # BIC
+summary(step_model_bic)
+
+# Gathering statistics for each model
+model_stats <- function(model) {
+  data.frame(
+    Beta_Parameters = length(coef(model)),  # Number of beta parameters
+    Residual_SD = sigma(model),  # Residual Standard Deviation
+    R_Squared = summary(model)$r.squared,  # R-squared
+    Adjusted_R_Squared = summary(model)$adj.r.squared,  # Adjusted R-squared
+    AIC = AIC(model),  # AIC
+    BIC = BIC(model)  # BIC
+  )
+}
+
+# Apply function to each model and combine results
+model_comparison <- data.frame(
+  Model = c("Null", "Model 1(b)", "Model 2(c)", "Model 3(d)", "AIC Model", "BIC Model"),
+  rbind(
+    model_stats(model_null),
+    model_stats(model_1b),
+    model_stats(model_2c),
+    model_stats(model_3d),
+    model_stats(step_model_aic),
+    model_stats(step_model_bic)
+  )
+)
+
+# Print the comparison table
+print(model_comparison)

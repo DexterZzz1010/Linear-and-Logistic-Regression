@@ -27,7 +27,7 @@ coast <- factor(data$Coastal, labels = c("No", "Yes"))
 data <- mutate(data, Coastal = coast) # 替代原来的Coastal
 data$Part <- factor(data$Part, labels = c("Gotaland", "Svealand", "Norrland"))
 
-model_2b = lm(log(PM10) ~ log(Vehicles) + Coastal*Part, data=data)
+model_2b = lm(log(PM10) ~ log(Vehicles) + Coastal+Part+ Coastal*Part, data=data)
 model_2b$coefficients
 
 count(data, Part == "Gotaland", Coastal == "Yes")
@@ -88,13 +88,16 @@ summary(model_2b)
 
 kommuner <-
   mutate(kommuner, NewParts =
-           as.numeric(Part == "Gotaland" & Coastal == "No") +
-           2*as.numeric(Part == "Svealand" & Coastal == "No") +
-           3*as.numeric(Part == "Norrland" | Coastal == "Yes"))
-kommuner$NewParts <- factor(kommuner$NewParts, labels = c("GotalandNo", "SvealandNo", "NorrlandYes"))
+           as.numeric(Part == "Gotaland"| Coastal == "Yes") +
+           3*as.numeric(Part == "Svealand"  & Coastal == "No") +
+           4*as.numeric(Part == "Norrland" & Coastal == "No")+
+           5*as.numeric(Part == "Norrland" & Coastal == "Yes"))
+kommuner$NewParts <- factor(kommuner$NewParts, labels = c("GotalorYes", "SvealandNo","NorrlandandNo", "NorrlandYes"))
 model_2c <- lm(log(PM10)~ log(Vehicles) + NewParts, data=kommuner)
 summary(model_2c)
 anova(model_2c,model_2b)
+
+# 目的是找一个显著性相近，但是参数更少的模型
 
 # 结果：F: 7.3241 Pr(>F): 9.575e-05
 
