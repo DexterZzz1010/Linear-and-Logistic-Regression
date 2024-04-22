@@ -64,13 +64,13 @@ data <- read_excel("Data/kommuner.xlsx")
 ggplot(data, aes(x = Vehicles, y = log(PM10))) + geom_point() + 
   xlab("Vehicles (1000/capita)") +
   ylab("PM10 (g)") +
-  labs(title = "PM10: by amount of vehicles") +
+  labs(title = "PM10: by amount of log-vehicles") +
   theme(text = element_text(size = 18))
 
 ggplot(data, aes(x = log(Vehicles), log(PM10))) + geom_point() +
   xlab("Vehicles (1000/capita)") +
   ylab("PM10 (g)") +
-  labs(title = "log(PM10): by amount of vehicles") +
+  labs(title = "log(PM10): by amount of log-vehicles") +
   theme(text = element_text(size = 18))
 
 lin_model <- lm(log(PM10) ~ Vehicles, data=data)
@@ -96,13 +96,13 @@ ggplot(data, aes(x = yhatlog, y = elog)) +
 ggplot(data = data, aes(sample = elin)) +
   geom_qq(size = 3) + geom_qq_line() +
   labs(tag = "C") +
-  labs(title = "Normal Q-Q-plot of the residuals(Linear)") +
+  labs(title = "Normal Q-Q-plot of the residuals(Linear) log-vehicles") +
   theme(text = element_text(size = 18))
 
 ggplot(data = data, aes(sample = elog)) +
   geom_qq(size = 3) + geom_qq_line() +
   labs(tag = "C") +
-  labs(title = "Normal Q-Q-plot of the residuals(Log-transformation)") +
+  labs(title = "Normal Q-Q-plot of the residuals(Log-transformation) log-vehicles") +
   theme(text = element_text(size = 18))
 
 
