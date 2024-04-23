@@ -18,9 +18,8 @@ kommuner <-
   mutate(kommuner, NewParts =
            as.numeric(Part == "Gotaland"| Coastal == "Yes") +
            3*as.numeric(Part == "Svealand"  & Coastal == "No") +
-           4*as.numeric(Part == "Norrland" & Coastal == "No")+
-           5*as.numeric(Part == "Norrland" & Coastal == "Yes"))
-kommuner$NewParts <- factor(kommuner$NewParts, labels = c("GotalorYes", "SvealandNo","NorrlandandNo", "NorrlandYes"))
+           4*as.numeric(Part == "Norrland" & Coastal == "No"))
+kommuner$NewParts <- factor(kommuner$NewParts, labels = c("GotalandorYes", "SvealandandNo","NorrlandandNo"))
 model_2e <- lm(log(PM10)~log(Vehicles)+log(Higheds)+Children+log(Income)+log(GRP)+NewParts, data=kommuner)
 summary(model_2e)
 ## leverage #####
@@ -42,16 +41,17 @@ top_leverage <- kommuner_pred %>%
   arrange(desc(v)) %>%
   slice(1:6)
 
+
 # 杠杆值高的观测点在回归线的确定中具有更大的权重，可能会对回归结果产生显著的影响，特别是如果这些观测点也是异常值的话。
 
-ggplot(kommuner_pred, aes(x = log(Vehicles), y = v)) +
+ggplot(kommuner_pred, aes(x = yhat, y = v)) +
   facet_wrap(~NewParts) +
   geom_point(size = 2)  +
-  geom_point(data = top_leverage, aes(x = log(Vehicles), y = v), color = "red", size = 3) +  
-  geom_text(data = top_leverage, aes(x = log(Vehicles), y = v, label = Kommun), vjust = -1, color = "blue") + 
+  geom_point(data = top_leverage, aes(x = yhat, y = v), color = "red", size = 3) +  
+  geom_text(data = top_leverage, aes(x = yhat, y = v, label = Kommun), vjust = -1, color = "blue") + 
   geom_hline(yintercept = 1/n) +
   geom_hline(yintercept = 2*pplus1/n, color = "red") +
-  labs(title = "Kommuner: leverage vs log Vehicles",
+  labs(title = "Kommuner: leverage vs yhat",
        caption = "y = 1/n (black) and 2(p+1)/n (red)",
        color = "Highlight") +
   theme(legend.position = "bottom",
@@ -61,6 +61,10 @@ ggplot(kommuner_pred, aes(x = log(Vehicles), y = v)) +
 #这个度量考虑了每个数据点对回归系数估计的影响，是通过观察移除一个点后模型参数估计变化的程度来计算的。
 #Cook的距离综合了杠杆值和残差大小的影响，因此能够识别那些不仅仅因为其残差或杠杆值大而具有潜在影响力的点。
 
+# Leverage评估观测值对参数估计的影响,Cook's distance评估观测值对模型拟合的影响。
+# Cook's distance考虑的范围更广,可以识别对模型拟合影响更大的异常点。
+# 但Leverage也是重要指标,可以识别可能是异常点的观测值。
+
 ## cook #####
 f1.kommuner <- pplus1
 f2.kommuner <- model_2e$df.residual
@@ -69,7 +73,7 @@ cook.limit.kommuner <- qf(0.5, f1.kommuner, f2.kommuner)
 top_cooks <- kommuner_pred %>%
   arrange(desc(D)) %>%
   slice(1:6)
-
+summary(model_2e)
 #  Identify the six municipalities with the highest Cook’s distance and highlight them in the plot.
 ggplot(kommuner_pred, aes(yhat, D)) + 
   facet_wrap(~NewParts)+
@@ -96,14 +100,41 @@ top_dfbetas <- dfbetas_values[top_cooks_indices, ]
 
 # Get the name of these municipalities
 influential_municipalities <- kommuner_pred$Kommun[max_dfbetas_indices]
+summary(model_2e)
 
-# Plot log(PM10) vs Vehicles, maybe we need to change the β-parameter
-ggplot(kommuner_pred, aes(x = Vehicles, y = log(PM10))) +
+###plot log-PM10 against the corresponding variable(s)##########################################################
+ggplot(kommuner_pred, aes(x = Vehicles , y = log(PM10))) +
   geom_point() +
   geom_point(data = kommuner_pred[kommuner_pred$Kommun %in% influential_municipalities, ],
-             aes(x = Vehicles, y = log(PM10)), color = "red", size = 4) + 
+             aes(x = Vehicles , y = log(PM10)), color = "red", size = 4) + 
   geom_text(data = kommuner_pred[kommuner_pred$Kommun %in% influential_municipalities, ],
-            aes(x = Vehicles, y = log(PM10), label = Kommun), vjust = -1, color = "blue") +
+            aes(x = Vehicles , y = log(PM10), label = Kommun), vjust = -1, color = "blue") +
+  xlab("Vehicles (1000/capita)") +
+  ylab("log(PM10) (g)") +
+  labs(title = "Influence of Municipalities on PM10",
+       subtitle = "Red points indicate municipalities with significant influence on beta parameters") +
+  theme(text = element_text(size = 16))
+
+# Plot log(PM10) vs log(Higheds), maybe we need to change the β-parameter
+ggplot(kommuner_pred, aes(x = log(Higheds) , y = log(PM10))) +
+  geom_point() +
+  geom_point(data = kommuner_pred[kommuner_pred$Kommun %in% influential_municipalities, ],
+             aes(x = log(Higheds) , y = log(PM10)), color = "red", size = 4) + 
+  geom_text(data = kommuner_pred[kommuner_pred$Kommun %in% influential_municipalities, ],
+            aes(x = log(Higheds) , y = log(PM10), label = Kommun), vjust = -1, color = "blue") +
+  xlab("Vehicles (1000/capita)") +
+  ylab("log(PM10) (g)") +
+  labs(title = "Influence of Municipalities on PM10",
+       subtitle = "Red points indicate municipalities with significant influence on beta parameters") +
+  theme(text = element_text(size = 16))
+
+# Plot log(PM10) vs log(GRP), maybe we need to change the β-parameter
+ggplot(kommuner_pred, aes(x = log(GRP) , y = log(PM10))) +
+  geom_point() +
+  geom_point(data = kommuner_pred[kommuner_pred$Kommun %in% influential_municipalities, ],
+             aes(x = log(GRP) , y = log(PM10)), color = "red", size = 4) + 
+  geom_text(data = kommuner_pred[kommuner_pred$Kommun %in% influential_municipalities, ],
+            aes(x = log(GRP) , y = log(PM10), label = Kommun), vjust = -1, color = "blue") +
   xlab("Vehicles (1000/capita)") +
   ylab("log(PM10) (g)") +
   labs(title = "Influence of Municipalities on PM10",
@@ -111,8 +142,25 @@ ggplot(kommuner_pred, aes(x = Vehicles, y = log(PM10))) +
   theme(text = element_text(size = 16))
 
 
-# c ####
-## Studentized residuals. #####
+
+# Plot log(PM10) vs log(GRP), maybe we need to change the β-parameter
+ggplot(kommuner_pred, aes(x = NewParts , y = log(PM10))) +
+  geom_point() +
+  geom_point(data = kommuner_pred[kommuner_pred$Kommun %in% influential_municipalities, ],
+             aes(x = NewParts , y = log(PM10)), color = "red", size = 4) + 
+  geom_text(data = kommuner_pred[kommuner_pred$Kommun %in% influential_municipalities, ],
+            aes(x = NewParts , y = log(PM10), label = Kommun), vjust = -1, color = "blue") +
+  xlab("Vehicles (1000/capita)") +
+  ylab("log(PM10) (g)") +
+  labs(title = "Influence of Municipalities on PM10",
+       subtitle = "Red points indicate municipalities with significant influence on beta parameters") +
+  theme(text = element_text(size = 16))
+
+
+#############################################################################################################
+
+
+
 kommuner_excl_pred <- mutate(
   kommuner,
   df0 = dfbetas(model_2e)[, "(Intercept)"],
@@ -138,17 +186,77 @@ top_influential <- kommuner_excl_pred %>%
   arrange(desc(abs(df2))) %>%
   slice(1:6)
 
-ggplot(kommuner_pred, aes(x = log(Vehicles), y = log(PM10))) + 
+###  DFBETAS Plot ########################################################################################
+ggplot(kommuner_excl_pred, aes(x = log(PM10), y = df1)) + 
+  geom_point(size = 3) +
+  geom_point(data = top_influential, color = "red", size = 3) +  
+  geom_text(data = top_influential, aes(x = log(PM10), y = df1, label = Kommun), vjust = -1, color = "blue") +
+  xlab("log(Vehicles)") +
+  ylab("log(PM10)") +
+  labs(title = "Kommuner: top influential",
+       caption = "4/n (dashed), F_0.5, p+1, n-(p+1) (solid)",
+       color = "Highlight") +
+  theme(text = element_text(size = 18))
+
+ggplot(kommuner_excl_pred, aes(x = log(PM10), y = df2)) + 
+  geom_point(size = 3) +
+  geom_point(data = top_influential, color = "red", size = 3) +  
+  geom_text(data = top_influential, aes(x = log(PM10), y = df2, label = Kommun), vjust = -1, color = "blue") +
+  xlab("log(Vehicles)") +
+  ylab("log(PM10)") +
+  labs(title = "Kommuner: top influential",
+       caption = "4/n (dashed), F_0.5, p+1, n-(p+1) (solid)",
+       color = "Highlight") +
+  theme(text = element_text(size = 18))
+
+ggplot(kommuner_excl_pred, aes(x = log(PM10), y = df3)) + 
+  geom_point(size = 3) +
+  geom_point(data = top_influential, color = "red", size = 3) +  
+  geom_text(data = top_influential, aes(x = log(PM10), y = df3, label = Kommun), vjust = -1, color = "blue") +
+  xlab("log(Vehicles)") +
+  ylab("log(PM10)") +
+  labs(title = "Kommuner: top influential",
+       caption = "4/n (dashed), F_0.5, p+1, n-(p+1) (solid)",
+       color = "Highlight") +
+  theme(text = element_text(size = 18))
+
+ggplot(kommuner_excl_pred, aes(x = log(PM10), y = df4)) + 
+  geom_point(size = 3) +
+  geom_point(data = top_influential, color = "red", size = 3) +  
+  geom_text(data = top_influential, aes(x = log(PM10), y = df4, label = Kommun), vjust = -1, color = "blue") +
+  xlab("log(Vehicles)") +
+  ylab("log(PM10)") +
+  labs(title = "Kommuner: top influential",
+       caption = "4/n (dashed), F_0.5, p+1, n-(p+1) (solid)",
+       color = "Highlight") +
+  theme(text = element_text(size = 18))
+
+ggplot(kommuner_excl_pred, aes(x = log(PM10), y = df5)) + 
+  geom_point(size = 3) +
+  geom_point(data = top_influential, color = "red", size = 3) +  
+  geom_text(data = top_influential, aes(x = log(PM10), y = df5, label = Kommun), vjust = -1, color = "blue") +
+  xlab("log(Vehicles)") +
+  ylab("log(PM10)") +
+  labs(title = "Kommuner: top influential",
+       caption = "4/n (dashed), F_0.5, p+1, n-(p+1) (solid)",
+       color = "Highlight") +
+  theme(text = element_text(size = 18))
+
+##########################################################################################
+
+ggplot(kommuner_excl_pred, aes(x = log(Vehicles), y = log(PM10))) + 
   geom_point(size = 3) +
   geom_point(data = top_influential, color = "red", size = 3) +  
   geom_text(data = top_influential, aes(x = log(Vehicles), y = log(PM10), label = Kommun), vjust = -1, color = "blue") +
   xlab("log(Vehicles)") +
   ylab("log(PM10)") +
-  labs(title = "Kommuner: Cook's D",
+  labs(title = "Kommuner: top influential",
        caption = "4/n (dashed), F_0.5, p+1, n-(p+1) (solid)",
        color = "Highlight") +
   theme(text = element_text(size = 18))
 
+# c ####
+## Studentized residuals. #####
 
 ggplot(kommuner_excl_pred, aes(x = log(Vehicles), y = log(PM10))) +
   geom_point(size = 2) +
@@ -156,8 +264,8 @@ ggplot(kommuner_excl_pred, aes(x = log(Vehicles), y = log(PM10))) +
              aes(color = "|r*|>3"), size = 3) +
   geom_point(data = filter(kommuner_excl_pred, D > 0.1),
              aes(shape = "Cook's D>0.1"), size = 3) +
-  ylab("DFBETAS_0(i)") +
-  xlab("Fitted values") +
+  ylab("log(PM10)") +
+  xlab("log(Vehicles)") +
   labs(title = "Pike: DFBETAS_0: impact on the intercept",
        subtitle = "without the strange fish",
        caption = "y = sqrt(F_0.5) and 2/sqrt(n)") +
@@ -328,3 +436,4 @@ model_comparison <- data.frame(
 
 # Print the comparison table
 print(model_comparison)
+

@@ -90,9 +90,8 @@ kommuner <-
   mutate(kommuner, NewParts =
            as.numeric(Part == "Gotaland"| Coastal == "Yes") +
            3*as.numeric(Part == "Svealand"  & Coastal == "No") +
-           4*as.numeric(Part == "Norrland" & Coastal == "No")+
-           5*as.numeric(Part == "Norrland" & Coastal == "Yes"))
-kommuner$NewParts <- factor(kommuner$NewParts, labels = c("GotalorYes", "SvealandNo","NorrlandandNo", "NorrlandYes"))
+           4*as.numeric(Part == "Norrland" & Coastal == "No"))
+kommuner$NewParts <- factor(kommuner$NewParts, labels = c("GotalandorYes", "SvealandandNo","NorrlandandNo"))
 model_2c <- lm(log(PM10)~ log(Vehicles) + NewParts, data=kommuner)
 summary(model_2c)
 anova(model_2c,model_2b)
@@ -116,11 +115,10 @@ p3 <- ggplot(kommuner, aes(x = log(Builton), y = log(PM10))) + geom_point()
 p4 <- ggplot(kommuner, aes(x = log(Higheds), y = log(PM10))) + geom_point()
 p5 <- ggplot(kommuner, aes(x = log(GRP), y = log(PM10))) + geom_point()
 p6 <- ggplot(kommuner, aes(x = Income, y = log(PM10))) + geom_point()
-p7 <- ggplot(kommuner, aes(x = Part, y = log(PM10))) + geom_point()
-p8 <- ggplot(kommuner, aes(x = County, y = log(PM10))) + geom_point()
+
 # 使用 patchwork 组合图形
-plot_grid <- p1 + p2 + p3 + p4 + p5 + p6 + p7 + p8 + 
-  plot_layout(nrow = 2, ncol = 4)  # 定义布局为 2 行 4 列
+plot_grid <- p1 + p2 + p3 + p4 + p5 + p6 + 
+  plot_layout(nrow = 2, ncol = 3)  # 定义布局为 2 行 4 列
 
 # 打印组合后的图形
 print(plot_grid)
