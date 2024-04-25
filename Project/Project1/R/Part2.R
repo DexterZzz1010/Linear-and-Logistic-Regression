@@ -138,9 +138,10 @@ vif(model_2d)
 #    8.546203     10.300020      2.005061 
 
 # e #####
-model_2e_ <- lm(log(PM10)~log(Vehicles)+log(Higheds)+Children+Seniors+log(Income)+log(GRP)+NewParts, data=kommuner)
+model_2e_ <- lm(log(PM10)~log(Vehicles)+log(Higheds)+Children+Seniors+log(Income)+log(GRP)+ log(Builton)+NewParts, data=kommuner)
 vif(model_2e_)
 ggpairs(kommuner,columns=c(8)) #remove seniors
+# model_2e <- lm(log(PM10)~log(Vehicles)+Children+log(Income)+NewParts, data=kommuner)
 model_2e <- lm(log(PM10)~log(Vehicles)+log(Higheds)+Children+log(Income)+log(GRP)+NewParts, data=kommuner)
 vif(model_2e)
 
