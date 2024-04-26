@@ -51,6 +51,8 @@ Pb_log_pred <- mutate(Pb_all,
 pplus1_log <- length(Pb_log_lm$coefficients)
 n_log <- nobs(Pb_log_lm)
 
+
+
 ggplot(Pb_log_pred, aes(x = year-1975  , y = v)) +
   geom_point(size = 2) +
   geom_point(data = filter(Pb_log_pred, Pb > 70), 
@@ -63,10 +65,13 @@ ggplot(Pb_log_pred, aes(x = year-1975  , y = v)) +
   theme(legend.position = "bottom",
         text = element_text(size = 16)) +
   scale_color_manual(values = highlightcolors)
+year_all = Pb_all$year
+mean(year_all)
 
 ##### b ######
 Pb_all <- mutate(Pb_all, region = relevel(region, "Norrbotten"))
 Pb_log_selected<- lm(log(Pb) ~ I(year - 1975)+ region, data = Pb_all)
+summary(Pb_log_selected)
 Pb_selected_pred <- mutate(Pb_all,
                       yhat = predict(Pb_log_selected),
                       r = rstudent(Pb_log_selected),
@@ -76,7 +81,12 @@ Pb_selected_pred <- mutate(Pb_all,
 pplus1_selected <- length(Pb_log_selected$coefficients)
 n_selected <- nobs(Pb_log_selected)
 
-ggplot(Pb_selected_pred, aes(x = year - 1975, y = v)) +
+region <- c("Orebro" = "red",
+                     "Jamtland" = "magenta", 
+                     "Vasternorrland" = "orange",
+                     "VastraGotaland" = "blue")
+
+ggplot(Pb_selected_pred, aes(x = year - 1975, y = v, color = region)) +
   geom_jitter(width = 1) +
   geom_point(data = filter(Pb_selected_pred), 
              aes(color = region), size = 3) +
@@ -87,7 +97,7 @@ ggplot(Pb_selected_pred, aes(x = year - 1975, y = v)) +
        color = "Highlight") +
   theme(legend.position = "bottom",
         text = element_text(size = 16)) +
-  scale_color_manual(values = highlightcolors)
+  scale_color_manual(values = region)
 
 #### c ####
 highlightcolors <- c("|r*|>3" = "red")
