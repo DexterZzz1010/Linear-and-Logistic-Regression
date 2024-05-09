@@ -598,6 +598,10 @@ print(roc_comparison_results)
 ## c #####
 youden <- coords(roc_2b, "best")
 topleft <- coords(roc_2b, "best", best.method = "closest.topleft")
+
+youden$threshold
+topleft$threshold
+
 youden$name <- "youden"
 topleft$name = "topleft"
 
@@ -609,4 +613,50 @@ ggroc(list(null = roc_aic, 'model 1b' = roc_1b, 'model 1c' = roc_1c,'model aic' 
   labs(title = "ROC-curve for model oslo",
        subtitle = "with optimal thresholds") +
   theme(text = element_text(size = 18))
+
+
+### threshold for each model #####
+# Function to extract the best threshold
+get_youden_threshold <- function(roc_obj) {
+  # coords(roc_obj, "best")$threshold
+  coords(roc_obj, "best", best.method = "closest.topleft")$threshold
+}
+
+# youden thresholds for each model
+threshold_1b <- get_youden_threshold(roc_1b)
+threshold_1c <- get_youden_threshold(roc_1c)
+threshold_aic <- get_youden_threshold(roc_aic)
+threshold_bic <- get_youden_threshold(roc_2b)
+threshold_full <- get_youden_threshold(roc_full)
+
+
+
+# Mutate to create predicted classifications using the best thresholds
+model_best_predictions <- pred_phat |> mutate(
+  yhat_1b = factor(p_1b > threshold_1b, levels = c(FALSE, TRUE), labels = c("low", "high")),
+  yhat_1c = factor(p_1c > threshold_1c, levels = c(FALSE, TRUE), labels = c("low", "high")),
+  yhat_bic = factor(p_bic > threshold_bic, levels = c(FALSE, TRUE), labels = c("low", "high")),
+  yhat_aic = factor(p_aic > threshold_aic, levels = c(FALSE, TRUE), labels = c("low", "high")),
+  yhat_full = factor(p_full > threshold_full, levels = c(FALSE, TRUE), labels = c("low", "high"))
+)
+
+# Compute confusion matrices using the predicted classifications
+cm_best_1b <- confusionMatrix(data = model_best_predictions$yhat_1b, reference = model_best_predictions$highcars_cat, positive = "high")
+cm_best_1c <- confusionMatrix(data = model_best_predictions$yhat_1c, reference = model_best_predictions$highcars_cat, positive = "high")
+cm_best_bic <- confusionMatrix(data = model_best_predictions$yhat_bic, reference = model_best_predictions$highcars_cat, positive = "high")
+cm_best_aic <- confusionMatrix(data = model_best_predictions$yhat_aic, reference = model_best_predictions$highcars_cat, positive = "high")
+cm_best_full <- confusionMatrix(data = model_best_predictions$yhat_full, reference = model_best_predictions$highcars_cat, positive = "high")
+
+# Print confusion matrices
+print(cm_best_1b)
+print(cm_best_1c)
+print(cm_best_bic)
+print(cm_best_aic)
+print(cm_best_full)
+
+print(cm_1b)
+print(cm_1c)
+print(cm_bic)
+print(cm_aic)
+print(cm_full)
 
