@@ -23,7 +23,7 @@ ggplot(kommuner, aes(Income, highcars, color = highcars_cat)) +
   geom_point() +
   xlab("Income") +
   ylab("High car") +
-  labs(title = "High PM10 (=1) or Not high PM10 (=0) vs number of cars") +
+  labs(title = "High cars (=1) or Not high cars (=0) vs number of Income") +
   theme(text = element_text(size = 14))
 
 
@@ -84,6 +84,50 @@ Pvalue <- pchisq(q = D_diff, df = df_diff, lower.tail = FALSE)
 
 # test output
 cbind(D_diff, df_diff, chi2_alpha, Pvalue)
+
+
+### Prediction of model_1b ####
+pred_1b <- cbind(
+  kommuner,
+  phat = predict(model_1b, type = "response"))
+
+# # Conf.int. for the linear predictor, logodds
+pred_1b <- cbind(
+  pred_1b,
+  logit = predict(model_1b, se.fit = TRUE))
+glimpse(pred_1b)
+
+pred_1b |> mutate(logit.residual.scale = NULL) -> pred_1b
+
+lambda <- qnorm(1 - 0.05/2)
+pred_1b |> mutate(
+  logit.lwr = logit.fit - lambda*logit.se.fit,
+  logit.upr = logit.fit + lambda*logit.se.fit) -> pred_1b
+
+# Confidence interval for the odds
+pred_1b |> mutate(
+  odds.lwr = exp(logit.lwr),
+  odds.upr = exp(logit.upr)) -> pred_1b
+
+# Confidence interval for the probabilities
+pred_1b |> mutate(
+  p = exp(logit.fit)/(1 + exp(logit.fit)),
+  p.lwr = odds.lwr/(1 + odds.lwr),
+  p.upr = odds.upr/(1 + odds.upr)) -> pred_1b
+glimpse(pred_1b)
+
+# Filter and select the rows where Part is 1, 2, or 3
+table_1b <- pred_1b %>%
+  group_by(Part) %>%
+  slice(1) %>%
+  filter(Part %in% c(1, 2, 3)) %>%
+  select(Part, logit.fit, logit.se.fit, logit.lwr, logit.upr, p, p.lwr, p.upr)
+
+
+# Display the resulting table
+table_1b |> round(digits = 3)
+
+
 
 ## c #####
 ### plot Highcars(0/1) against Transit #####
@@ -165,9 +209,9 @@ ggplot(model_1c_pred, aes(Transit, highcars)) +
   geom_point() +
   geom_line(aes(y = phat), color = "red", size = 1) +
   geom_ribbon(aes(ymin = p.lwr, ymax = p.upr), alpha = 0.2) +
-  xlab("number of cars") +
-  ylab("High PM10") +
-  labs(title = "High PM10 (=1) or Not high PM10 (=0) vs number of cars",
+  xlab("number of bus stops") +
+  ylab("High Cars") +
+  labs(title = "High Cars (=1) or Not high Cars (=0) vs number of Transit",
        caption = "red = fitted line, with 95% confidence interval") +
   theme(text = element_text(size = 14))
 
