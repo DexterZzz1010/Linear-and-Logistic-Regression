@@ -443,7 +443,9 @@ ggplot(kommuner_pred, aes(xbeta, D)) +
   geom_point(size = 3) +
   geom_point(data = top_cooks, color = "red", size = 3) +  
   geom_text(data = top_cooks, aes(x = xbeta, y = D, label = Kommun), vjust = -1, color = "blue") +
-  geom_hline(yintercept = cook.limit.kommuner, color = "red") +
+  #geom_hline(yintercept = cook.limit.kommuner, color = "red") +
+  geom_point(data = filter(kommuner_pred, abs(D) > 4/n),
+             aes(color = "D > 4/n"), size = 3, color = "red") +
   geom_hline(yintercept = 4/n, linetype = 2, color = "red") +
   xlab("Fitted values") +
   ylab("D_i") +
