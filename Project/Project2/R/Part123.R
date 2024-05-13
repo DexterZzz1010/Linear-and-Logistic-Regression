@@ -131,7 +131,7 @@ table_1b |> round(digits = 3)
 
 ## c #####
 ### plot Highcars(0/1) against Transit #####
-ggplot(kommuner, aes(Transit, highcars)) +
+ggplot(kommuner, aes((Transit), highcars)) +
 geom_point() +
 geom_smooth() +
 xlab("Transit") +
@@ -255,7 +255,7 @@ ggplot(model_1c_pred, aes(x = xbeta, y = v)) +
 model_1c_pred |> slice_max(v, n = 8)
 
 # highlight
-ggplot(model_1c_pred, aes(x = xbeta, y = v)) +
+ggplot(model_1c_pred, aes(x = Transit, y = v)) +
   geom_point() +
   geom_point(data = filter(model_1c_pred, v > 0.045), 
              aes(color = "v > 0.045"), size = 3) +
@@ -573,7 +573,7 @@ ggroc(roc_2b) +
   labs(title = "ROC-curve for model 2b")
 
 ### compare #####
-ggroc(list(null = roc_aic, 'model 1b' = roc_1b, 'model 1c' = roc_1c,'model aic' =  roc_aic,
+ggroc(list(null = roc_null, 'model 1b' = roc_1b, 'model 1c' = roc_1c,'model aic' =  roc_aic,
            'model 2b' = roc_2b, 'model full' = roc_full )) +
   coord_fixed() +
   labs(title = "ROC-curves for model oslo and the null model")
@@ -700,6 +700,7 @@ print(cm_best_bic)
 print(cm_best_aic)
 print(cm_best_full)
 
+print(cm_null)
 print(cm_1b)
 print(cm_1c)
 print(cm_bic)

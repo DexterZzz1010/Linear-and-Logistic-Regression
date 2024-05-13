@@ -3,3 +3,46 @@
 通过观察表格1（a），我们发现当Part增加一个单位时，highcars变量会增加到原始几率的2.3倍。
 
 使用wald_test对model 1b 进行测试，结果如表1所示，根据Pr < 0.05、z > 1.96的标准，我们发现part和highcars之间存在显著性
+
+根据odd-ratio可以计算出当因变量（Transit）增加1percent时，因变量会变成原本的0.93倍
+
+1. **McFadden's adjusted pseudo R\textsuperscript{2}（R\textsuperscript{2}McF.adj）**：这个指标用于衡量模型的拟合优度。数值越接近1，说明模型对观测数据的解释能力越好。
+2. **AIC（Akaike Information Criterion）**：AIC是一个综合性的指标，结合了模型的拟合优度和复杂度。AIC值越小表示模型在拟合数据时所使用的信息量越少，说明模型更好。
+3. **BIC（Bayesian Information Criterion）**：BIC也是一个综合性的指标，类似于AIC，但对于样本量较小的情况更为有效。与AIC类似，BIC值越小表示模型的质量越好。
+4. **log-likelihood（对数似然）**: 通常用于评估统计模型的拟合优度，数值越大表示模型拟合数据的能力越好。可以计算两个模型的 log-likelihood 差异，然后观察哪个模型的 log-likelihood 更高。通常情况下，差异越大，log-likelihood 较高的模型更优。
+
+综合考虑这几个指标，可以通过比较它们的数值来判断哪个模型更好。通常情况下，选择具有更高McFadden's adjusted pseudo R\textsuperscript{2}和更小AIC、BIC、log-likelihood的模型作为更好的模型。
+
+
+
+我们可以看到 Model 1(c) 的AIC、BIC比 Model 1(b) 的AIC、BIC更小，而R\textsuperscript{2}McF.adj和log-likelihood更高，说明Model 1(c)比Model 1(b)更好。witch indicate that access to a bus stop seems more important .
+
+
+
+通过观察table3b我们可以发现 model2b的auc值大于0.9且与aic模型，full模型的auc值相近，那么我们可以认为model2b是一个性能很好的模型，再参考其他性能指标，与2b得到结论的一致。
+
+Sensitivity 变大
+
+McNemar’s P-Value 变小
+
+对比table3a 和table3c后发现，一个有趣的现象是，调整阈值之后，虽然acc变小，但是 Sensitivity 变大，且model2b是Sensitivity 最大的模型，这证明了model2b是最好的。
+
+
+
+考虑所有结果，我们选择2b（bic 结果）作为最佳的模型。以下为我们考量的几个方面：
+
+参数量最小
+
+confusion matrix：aic 、full 、2b 的准确率相当，但是model2b的Sensitivity 最高
+
+
+
+
+基于所有结果，我们选择模型2b（bic结果）作为最优模型，选择的几个理由如下：
+
+1. **参数量最小**：模型2b拥有最少的参数数量，往往意味着模型的泛化能力更强，表明这是一个更加简洁的模型，避免了过拟合的同时保持良好的预测性能。
+2. **混淆矩阵中的表现**：虽然模型aic、full和2b的准确率相当，都达到了80%以上。
+3. **高敏感性**：模型2b的敏感性得分高于其他模型，显示了其准确分类正类的能力。当假阴性的成本很高时，这一点尤其宝贵，因此使得模型2b在比较的模型中成为最可靠的选择。
+
+这些因素共同确立了模型2b作为考虑的模型中的最佳选择，平衡了复杂性、性能以及正确识别正例的能力。
+
