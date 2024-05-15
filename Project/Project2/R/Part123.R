@@ -40,6 +40,7 @@ kommuner %>%
 
 ## b #####
 ## model 1b #####
+kommuner$Part <- factor(kommuner$Part, labels = c("Gotaland", "Svealand", "Norrland"))
 model_1b<- glm(highcars ~ Part, 
                       family = "binomial", 
                       data = kommuner)
@@ -289,15 +290,9 @@ collect.AICetc
 
 # McFadden
 collect.AICetc |> mutate(
-  R2McF = 1 - loglik/lnL0,
+  R2McF = loglik/lnL0,
   R2McF.adj = 1 - (loglik - (df - 1)/2)/lnL0) -> collect.AICetc
 collect.AICetc
-
-
-
-
-
-
 
 # Part 2 ######
 
@@ -325,7 +320,7 @@ kommuner$Fertility[I] <- 1.57 # 1.57
 
 
 ## b #####
-model_full <- glm(highcars ~ log(Higheds)+Children+Seniors+log(Income)+log(GRP)+ Persperhh+Fertility+Urban+Transit+Apartments, 
+model_full <- glm(highcars ~ log(Higheds)+Children+Seniors+log(Income)+log(GRP)+ Persperhh+Fertility+Urban+Transit+log(Apartments), 
                   family = "binomial", 
                   data = kommuner)
 summary(model_full)
@@ -490,7 +485,7 @@ for (i in 1:nrow(high_cooks_dfbetas)) {
 
 ## d #####
 ### QQ #####
-ggplot(oslo_pred, aes(sample = stddevresid)) +
+ggplot(kommuner_pred, aes(sample = stddevresid)) +
   geom_qq() + geom_qq_line()
 
 ### standard deviance
@@ -706,4 +701,79 @@ print(cm_1c)
 print(cm_bic)
 print(cm_aic)
 print(cm_full)
+
+### Prediction of model_2b ####
+pred_2b <- cbind(
+  kommuner,
+  phat = predict(model_2b, type = "response"))
+
+# # Conf.int. for the linear predictor, logodds
+pred_2b <- cbind(
+  pred_2b,
+  logit = predict(model_2b, se.fit = TRUE))
+glimpse(pred_2b)
+
+pred_2b |> mutate(logit.residual.scale = NULL) -> pred_2b
+
+lambda <- qnorm(1 - 0.05/2)
+pred_2b |> mutate(
+  logit.lwr = logit.fit - lambda*logit.se.fit,
+  logit.upr = logit.fit + lambda*logit.se.fit) -> pred_2b
+
+# Confidence interval for the odds
+pred_2b |> mutate(
+  odds.lwr = exp(logit.lwr),
+  odds.upr = exp(logit.upr)) -> pred_2b
+
+# Confidence interval for the probabilities
+pred_2b |> mutate(
+  p = exp(logit.fit)/(1 + exp(logit.fit)),
+  p.lwr = odds.lwr/(1 + odds.lwr),
+  p.upr = odds.upr/(1 + odds.upr)) -> pred_2b
+glimpse(pred_2b)
+
+# Filter and select the rows where Part is 1, 2, or 3
+table_2b <- pred_2b %>%
+  group_by(Part) %>%
+  slice(1) %>%
+  filter(Part %in% c(1, 2, 3)) %>%
+  select(Part, logit.fit, logit.se.fit, logit.lwr, logit.upr, p, p.lwr, p.upr)
+
+
+# Display the resulting table
+table_2b |> round(digits = 3)
+
+### β-estimates #####
+# Interval for beta (intercept log odds and log odds ratio)
+bhat <- model_2b$coefficients
+ci.beta <- confint(model_2b)
+cbind(beta = bhat, ci.beta) |> round(digits = 2)
+
+# Interval for Odds and Odds Ratio, exp(beta)
+# exp(beta0), exp(beta1)
+or = exp(bhat)
+ci.or <- exp(ci.beta)
+cbind(`exp(beta)` = or, ci.or) |> round(digits = 2)
+
+# Wald-based intervals by hand
+se.bhat <- summary(model_2b)$coefficients[, "Std. Error"]
+ci.wald <- cbind(lo = bhat - 1.96*se.bhat, hi = bhat + 1.96*se.bhat)
+ci.wald |> round(digits = 2)
+
+### β-estimates #####
+# Interval for beta (intercept log odds and log odds ratio)
+bhat <- model_2b$coefficients
+ci.beta <- confint(model_2b)
+cbind(beta = bhat, ci.beta) |> round(digits = 2)
+
+# Interval for Odds and Odds Ratio, exp(beta)
+# exp(beta0), exp(beta1)
+or = exp(bhat)
+ci.or <- exp(ci.beta)
+cbind(`exp(beta)` = or, ci.or) |> round(digits = 2)
+
+# Wald-based intervals by hand
+se.bhat <- summary(model_1b)$coefficients[, "Std. Error"]
+ci.wald <- cbind(lo = bhat - 1.96*se.bhat, hi = bhat + 1.96*se.bhat)
+ci.wald |> round(digits = 2)
 
