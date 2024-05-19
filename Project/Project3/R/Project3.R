@@ -20,6 +20,7 @@ summary(kommuner)
 
 
 # new parts #####
+# 分割newparts
 coast <- factor(kommuner$Coastal, labels = c("No", "Yes"))
 kommuner <- mutate(kommuner, Coastal = coast)
 kommuner$Part <- factor(kommuner$Part, labels = c("Gotaland", "Svealand", "Norrland"))
@@ -34,6 +35,7 @@ kommuner$NewParts <- factor(kommuner$NewParts, labels = c("GotalandorYes", "Svea
 
 
 # For the missing data ####
+# 将缺失数据填充
 kommuner |> mutate(Fertility = as.numeric(Fertility)) -> kommuner
 
 kommuner |> filter(Part == 3 & Coastal == 0) |>
@@ -98,20 +100,6 @@ columns_to_use <- c("Builton", "Children", "Seniors", "HighEds")
 selected_columns <- kommuner %>% select(columns_to_use)
 cor_matrix <- cor(selected_columns, use = "complete.obs")
 
-# 找到高度相关的特征对（绝对值大于0.75）
-highly_correlated <- findCorrelation(cor_matrix, cutoff = 0.75)
-
-# 显示高度相关的特征对
-print(highly_correlated)
-
-# 删除高度相关的特征
-df_reduced <- df %>% select(-highly_correlated)
-
-# 重新生成 ggpairs 图以确认结果
-ggpairs(df_reduced)
-
-
-
 
 
 model_full <- glm(Cars_nbr ~ log(Higheds) + Children + Seniors + log(Income) + 
@@ -155,6 +143,8 @@ bic <- BIC(step_model_aic,step_model_bic)
 collect.AICetc <- data.frame(aic, bic)
 collect.AICetc |> mutate(df.1 = NULL) -> collect.AICetc
 collect.AICetc
+# 感觉AIC BIC 没用，根据vif和cor手动筛选
+
 
 ## parts ####
 # 探究不同的part之间，分布有没有不同
@@ -315,6 +305,8 @@ ggplot(nb_pred, aes(Fertility, Cars_nbr, color = NewParts)) +
   geom_line(aes(y = muhat), linewidth = 1) +
   geom_ribbon(aes(ymin = mu.lwr, ymax = mu.upr), alpha = 0.1) +
   facet_wrap(~ NewParts)
+
+
 ## standardized deviance residuals ####\
 # compare with poisson
 nb_infl <- influence(modele_glmnb)
@@ -333,6 +325,7 @@ nb_pred |> mutate(
   devres_pois = poi_red_infl$dev.res,
   std.devres_pois = devres_pois/sqrt(1 - v_pois)) -> nb_pred
 
+# 对比泊松和伯努利的结果范围
 nb_pred |> summarise(
   min_nb = min(std.devres),
   max_nb = max(std.devres),
@@ -344,6 +337,7 @@ top_nb_dev <- nb_pred %>%
   arrange(desc(abs(std.devres))) %>%
   slice(1:6)
 
+# plot 伯努利分布的residuals
 ggplot(nb_pred, aes(x = xb.fit, color = NewParts)) +
   geom_point(aes(y = std.devres), size = 2) +
   geom_point(data = top_nb_dev, aes(x = xb.fit, y = std.devres), color = "red", size = 3) +  
