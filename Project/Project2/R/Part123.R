@@ -78,6 +78,18 @@ print(z.b1)
 # z > 1.96
 
 ### LR test -  the null hypothesis #####
+model_null<- glm(highcars ~ 1, 
+               family = "binomial", 
+               data = kommuner)
+D_diff <- model_null$deviance - model_1b$deviance
+df_diff <- model_null$df.residual - model_1b$df.residual
+chi2_alpha <- qchisq(p = 1 - 0.05, df = df_diff)
+Pvalue <- pchisq(q = D_diff, df = df_diff, lower.tail = FALSE)
+
+# test output
+cbind(D_diff, df_diff, chi2_alpha, Pvalue)
+
+
 D_diff <- model_1b$null.deviance - model_1b$deviance
 df_diff <- model_1b$df.null - model_1b$df.residual
 chi2_alpha <- qchisq(p = 1 - 0.05, df = df_diff)
@@ -88,6 +100,96 @@ cbind(D_diff, df_diff, chi2_alpha, Pvalue)
 
 
 ### Prediction of model_1b ####
+pred_1b <- cbind(
+  kommuner,
+  phat = predict(model_1b, type = "response"))
+
+# # Conf.int. for the linear predictor, logodds
+pred_1b <- cbind(
+  pred_1b,
+  logit = predict(model_1b, se.fit = TRUE))
+glimpse(pred_1b)
+
+pred_1b |> mutate(logit.residual.scale = NULL) -> pred_1b
+
+lambda <- qnorm(1 - 0.05/2)
+pred_1b |> mutate(
+  logit.lwr = logit.fit - lambda*logit.se.fit,
+  logit.upr = logit.fit + lambda*logit.se.fit) -> pred_1b
+
+# Confidence interval for the odds
+pred_1b |> mutate(
+  odds.lwr = exp(logit.lwr),
+  odds.upr = exp(logit.upr)) -> pred_1b
+
+# Confidence interval for the probabilities
+pred_1b |> mutate(
+  p = exp(logit.fit)/(1 + exp(logit.fit)),
+  p.lwr = odds.lwr/(1 + odds.lwr),
+  p.upr = odds.upr/(1 + odds.upr)) -> pred_1b
+glimpse(pred_1b)
+
+# Filter and select the rows where Part is 1, 2, or 3
+table_1b <- pred_1b %>%
+  group_by(Part) %>%
+  slice(1) %>%
+  filter(Part %in% c("Gotaland", "Svealand", "Norrland")) %>%
+  select(Part, logit.fit, logit.se.fit, logit.lwr, logit.upr, p, p.lwr, p.upr)
+
+
+# Display the resulting table
+table_1b |> round(digits = 3)
+
+
+## 1b #####
+# Fit the logistic regression model
+model_1b <- glm(highcars_cat ~ Part, family = "binomial", data = kommuner)
+model_1b_sum <- summary(model_1b)
+
+# Interval for beta, Odds and Odds Ratio
+beta <- model_1b$coefficients
+ci.beta <- confint(model_1b)
+
+cbind(b = beta, ci.beta, `exp(b)` = exp(beta), exp(ci.beta)) |> round(digits = 2)
+
+# Wald-based intervals
+bhat <- model_1b$coefficients
+ci.beta <- confint(model_1b)
+cbind(beta = bhat, ci.beta) |> round(digits = 2)
+
+# exp(beta0), exp(beta1)
+or = exp(bhat)
+ci.or <- exp(ci.beta)
+cbind(`exp(beta)` = or, ci.or) |> round(digits = 2)
+
+se.bhat <- summary(model_1b)$coefficients[, "Std. Error"]
+ci.wald <- cbind(lo = bhat - 1.96*se.bhat, hi = bhat + 1.96*se.bhat)
+ci.wald |> round(digits = 2)
+
+exp(ci.wald) |> round(digits = 2)
+
+## Significance
+# Wald test for beta_j
+# lambda = 1.96
+lambda <- qnorm(1 - 0.05/2)
+model_1b_sum$coefficients
+b1 <- model_1b_sum$coefficients[2, "Estimate"]
+se.b1 <- model_1b_sum$coefficients[2, "Std. Error"]
+# z.b1 = -7.08040, 7.08 > 1.96, reject H0
+z.b1 <- model_1b_sum$coefficients[2, "z value"]
+
+b0 <- model_1b_sum$coefficients[1, "Estimate"]
+se.b0 <- model_1b_sum$coefficients[1, "Std. Error"]
+# z.b0 = 4.304683, 4.30 > 1.96, reject H0
+z.b0 <- model_1b_sum$coefficients[1, "z value"]
+
+# P-value
+# Intercept Pr(>|z|)=1.44e-12 < 0.05
+# Part Pr(>|z|) = 1.67e-05 < 0.05
+model_1b_sum
+
+
+# Prediction of model_1b
 pred_1b <- cbind(
   kommuner,
   phat = predict(model_1b, type = "response"))

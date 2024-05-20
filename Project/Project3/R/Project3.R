@@ -43,12 +43,38 @@ kommuner |> filter(Part == 3 & Coastal == 0) |>
 I <- which(is.na(kommuner$Fertility))
 kommuner$Fertility[I] <- 1.57 # meanfertility = 1.57
 
+summary(kommuner)
+
+
+
+## plot ######
+# 创建并保存 ggplot 图
+variables <- c("log(Higheds)", "Children", "Seniors", "log(Income)", "log(GRP)", "Persperhh", 
+               "Fertility", "Urban", "Transit", "log(Apartments)", "Builton", "log(Population)", "NewParts")
+for (var in variables) {
+  p <- ggplot(kommuner, aes_string(x = var, y = "Cars_nbr")) + 
+    geom_point() + 
+    xlab(var) +
+    ylab("log(Cars_nbr)") +
+    labs(title = paste("Cars_nbr: by", var)) +
+    theme(text = element_text(size = 18))
+  
+  # 保存图形
+  ggsave(filename = paste0("plot_", gsub("[()]", "", var), ".png"), plot = p, width = 8, height = 6)
+}
+
+
+
+
 
 ggplot(kommuner, aes(x = log(Population), y = log(Cars_nbr))) + geom_point() + 
   xlab("log(Population)") +
   ylab("log(Cars_nbr)") +
   labs(title = "log(Cars_nbr): by amount of log(Population)") +
   theme(text = element_text(size = 18))
+
+
+
 
 
 kommuner_glm <- glm(log(Cars_nbr) ~ log(Population), family = "poisson", data = kommuner)
@@ -333,18 +359,67 @@ nb_pred |> summarise(
   max_pois = max(std.devres_pois))
 
 
-top_nb_dev <- nb_pred %>%
-  arrange(desc(abs(std.devres))) %>%
-  slice(1:6)
+high_residuals_excl <- filter(nb_pred, abs(std.devres) > 3)
 
 # plot 伯努利分布的residuals
 ggplot(nb_pred, aes(x = xb.fit, color = NewParts)) +
   geom_point(aes(y = std.devres), size = 2) +
-  geom_point(data = top_nb_dev, aes(x = xb.fit, y = std.devres), color = "red", size = 3) +  
-  geom_text(data = top_nb_dev, aes(x = xb.fit, y = std.devres, label = Kommun), vjust = -1, color = "blue") + 
+  geom_point(data = high_residuals_excl, aes(x = xb.fit, y = std.devres), color = "red", size = 3) +  
+  geom_text(data = high_residuals_excl, aes(x = xb.fit, y = std.devres, label = Kommun), vjust = -1, color = "blue") + 
   geom_hline(yintercept = c(-3, -2, 0, 2, 3), 
              linetype = 2, linewidth = 1) +
   expand_limits(y = c(-4.5, 7.5)) +
   labs(y = "std dev.res", x = "xb", color = "program",
        title = "Absence: Negbin model") +
-  theme(text = element_text(size = 18))
+  theme(text = element_text(size = 18))+
+  facet_wrap(~ NewParts)
+
+## nb_red #####
+remove <- c("0183 Sundbyberg","1275 Perstorp","0186 Lidingö","1480 Göteborg")
+
+kommuner_ <- kommuner %>%
+  filter(!Kommun %in% remove)
+nb_red <- update(modele_glmnb, data = kommuner_)
+
+nb_pred_ <- cbind(
+  kommuner_,
+  xb = predict(nb_red, se.fit = TRUE))
+
+nb_pred_ |> 
+  mutate(
+    xb.residual.scale = NULL,
+    xb.lwr = xb.fit - 1.96*xb.se.fit,
+    xb.upr = xb.fit + 1.96*xb.se.fit,
+    muhat = exp(xb.fit),
+    mu.lwr = exp(xb.lwr),
+    mu.upr = exp(xb.upr)) ->
+  nb_pred_
+
+nb_infl <- influence(nb_red)
+nb_pred_ |> mutate(
+  v = hatvalues(nb_red),
+  devres = nb_infl$dev.res,
+  std.devres = devres/sqrt(1 - v)) ->
+  nb_pred_
+
+# poi_red_infl <- influence(model_poi_red)
+# glimpse(poi_red_infl)
+
+
+
+# Get municipality with high residuals
+high_residuals_excl <- filter(nb_pred_, abs(std.devres) > 3)
+
+# plot 伯努利分布的residuals
+ggplot(nb_pred_, aes(x = xb.fit, color = NewParts)) +
+  geom_point(aes(y = std.devres), size = 2) +
+  geom_point(data = high_residuals_excl, aes(x = xb.fit, y = std.devres), color = "red", size = 3) +  
+  geom_text(data = high_residuals_excl, aes(x = xb.fit, y = std.devres, label = Kommun), vjust = -1, color = "blue") + 
+  geom_hline(yintercept = c(-3, -2, 0, 2, 3), 
+             linetype = 2, linewidth = 1) +
+  expand_limits(y = c(-4.5, 7.5)) +
+  labs(y = "std dev.res", x = "xb", color = "program",
+       title = "Absence: Negbin model") +
+  theme(text = element_text(size = 18))+
+  facet_wrap(~ NewParts)
+
