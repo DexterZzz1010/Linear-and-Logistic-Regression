@@ -194,11 +194,11 @@ pchisq(D_diff_red, df_diff_red, lower.tail = FALSE)
 # 删减后的模型
 model_poi_red <- glm(Cars_nbr ~  log(Income) + 
                     log(GRP) + Persperhh + Fertility  + Transit +
-                  +Builton +  log(Population) + NewParts, 
+                  +  log(Population) + NewParts, 
                   family = "poisson", 
                   data = kommuner)
 summary(model_poi_red)
-model_full_sum <- summary(model_poi_red)
+model_poi_red_sum <- summary(model_poi_red)
 vif(model_poi_red)
 
 
@@ -303,7 +303,7 @@ ggplot(poi_pred, aes(Fertility, D, color = NewParts)) +
 # negbin #####
 modele_glmnb <- glm.nb(Cars_nbr ~  log(Income) + 
                          log(GRP) + Persperhh + Fertility  + Transit +
-                         +Builton +  log(Population) + NewParts, 
+                        +  log(Population) + NewParts, 
                        data = kommuner)
 summary(modele_glmnb)
 
