@@ -120,11 +120,6 @@ ggplot(kommuner_pred, aes(log(Population), log(Cars_nbr))) +
 
 
 ggpairs(kommuner,columns=c(6,7,8,9,10,11,14,15,16,17,18,20))
-columns_to_use <- c("Builton", "Children", "Seniors", "HighEds")
-
-
-selected_columns <- kommuner %>% select(columns_to_use)
-cor_matrix <- cor(selected_columns, use = "complete.obs")
 
 
 
@@ -192,14 +187,29 @@ pchisq(D_diff_red, df_diff_red, lower.tail = FALSE)
 
 ## possion reduce model ######
 # 删减后的模型
-model_poi_red <- glm(Cars_nbr ~  log(Income) + 
-                    log(GRP) + Persperhh + Fertility  + Transit +
-                  +  log(Population) + NewParts, 
+model_poi_red <- glm(Cars_nbr ~ log(Apartments) + log(Builton) + log(Higheds) + 
+                       log(Seniors) + Transit + Urban + log(Vehicles) + NewParts+ 
+                       offset( log(Population) ),
                   family = "poisson", 
                   data = kommuner)
 summary(model_poi_red)
 model_poi_red_sum <- summary(model_poi_red)
 vif(model_poi_red)
+
+
+model_red_pop <- update(model_poi_red, . ~ . - log(Population))
+summary(model_red_part)
+
+D_diff_red <- model_red_pop$deviance - model_poi_red$deviance
+D_diff_red
+
+df_diff_red <- model_red_pop$df.residual - model_poi_red$df.residual
+df_diff_red
+
+anova(model_red_pop, model_poi_red)
+qchisq(1 - 0.05, df_diff_red)
+pchisq(D_diff_red, df_diff_red, lower.tail = FALSE)
+
 
 
 beta <- model_poi_red$coefficients
@@ -245,14 +255,14 @@ top_leverage <- poi_pred %>%
   slice(1:6)
 
 
-ggplot(poi_pred, aes(muhat, v, color = NewParts)) +
+ggplot(poi_pred, aes(log(muhat), v, color = NewParts)) +
   geom_point(size = 2) +
-  geom_point(data = top_leverage, aes(x = muhat, y = v), color = "red", size = 3) +  
-  geom_text(data = top_leverage, aes(x = muhat, y = v, label = Kommun), vjust = -1, color = "blue") + 
+  geom_point(data = top_leverage, aes(x = log(muhat), y = v), color = "red", size = 3) +  
+  geom_text(data = top_leverage, aes(x = log(muhat), y = v, label = Kommun), vjust = -1, color = "blue") + 
   geom_hline(yintercept = 1/n, linetype = "dashed",color = "red") +
   geom_hline(yintercept = 2*pplus1/n, color = "red") +
-  labs(title = "Leverage",
-       color = "program", caption = "horizontal line = 2(p+1)/n") +
+  labs(title = "Poisson Regression Leverage",
+       color = "NewParts", caption = "horizontal line = 2(p+1)/n") +
   theme(text = element_text(size = 18)) +
   facet_wrap(~ NewParts)
 
@@ -269,17 +279,16 @@ top_dev <- poi_pred %>%
   arrange(desc(abs(std.devres))) %>%
   slice(1:6)
 
-ggplot(poi_pred, aes(Fertility, std.devres, color = NewParts)) +
+ggplot(poi_pred, aes(log(muhat), std.devres, color = NewParts)) +
   geom_point(size = 2) +
-  geom_point(data = top_dev, aes(x = Fertility, y = std.devres), color = "red", size = 3) +  
-  geom_text(data = top_dev, aes(x = Fertility, y = std.devres, label = Kommun), vjust = -1, color = "blue") + 
+  geom_point(data = top_dev, aes(x = log(muhat), y = std.devres), color = "red", size = 3) +  
+  geom_text(data = top_dev, aes(x = log(muhat), y = std.devres, label = Kommun), vjust = -1, color = "blue") + 
   geom_hline(yintercept = 0, linewidth = 1) +
   geom_hline(yintercept = c(-2, 2), linetype = "dashed", linewidth = 1) +
   geom_hline(yintercept = c(-3, 3), linetype = "dotted", linewidth = 1) +
-  labs(title = "Standardized deviance residuals",
-       color = "program") +
-  theme(text = element_text(size = 18)) +
-  facet_wrap(~ NewParts)
+  labs(title = "Poisson Regression Standardized deviance residuals",
+       color = "NewParts") +
+  theme(text = element_text(size = 18)) 
 
 
 ## Cook’s D #####
@@ -289,33 +298,56 @@ top_cook <- poi_pred %>%
   arrange(desc(abs(D))) %>%
   slice(1:6)
 
-ggplot(poi_pred, aes(Fertility, D, color = NewParts)) +
+ggplot(poi_pred, aes(log(muhat), D, color = NewParts)) +
   geom_point(size = 2) +
-  geom_point(data = top_cook, aes(x = Fertility, y = D), color = "red", size = 3) +  
-  geom_text(data = top_cook, aes(x = Fertility, y = D, label = Kommun), vjust = -1, color = "blue") + 
+  geom_point(data = top_cook, aes(x = log(muhat), y = D), color = "red", size = 3) +  
+  geom_text(data = top_cook, aes(x = log(muhat), y = D, label = Kommun), vjust = -1, color = "blue") + 
   geom_hline(yintercept = c(4/n, 1), color = "red") +
-  labs(title = "Cook's distance",
-       color = "program", caption = "horizontal lines = 4/n and 1") +
+  labs(title = "Poisson Regression Cook's distance",
+       color = "NewParts", caption = "horizontal lines = 4/n and 1") +
   theme(text = element_text(size = 18)) +
   facet_wrap(~ NewParts)
 
 
 # negbin #####
-modele_glmnb <- glm.nb(Cars_nbr ~  log(Income) + 
-                         log(GRP) + Persperhh + Fertility  + Transit +
-                        +  log(Population) + NewParts, 
+model_nb <- glm.nb(Cars_nbr ~ log(Apartments) + log(Builton) + log(Higheds)  +
+                         log(Seniors) + Transit + Urban + log(Vehicles) + NewParts+ 
+                       offset(log(Population)),
                        data = kommuner)
-summary(modele_glmnb)
+summary(model_nb)
+vif(model_nb)
 
-beta <- modele_glmnb$coefficients
-ci_beta = confint(modele_glmnb)
+
+model_red_part <- update(model_nb, . ~ . - NewParts)
+summary(model_red_part)
+
+D_diff_red <- model_red_part$deviance - model_nb$deviance
+D_diff_red
+
+df_diff_red <- model_red_part$df.residual - model_nb$df.residual
+df_diff_red
+
+anova(model_red_part, model_nb)
+qchisq(1 - 0.05, df_diff_red)
+pchisq(D_diff_red, df_diff_red, lower.tail = FALSE)
+
+
+
+model_poi <- glm(Cars_nbr ~ log(Apartments) + log(Builton) + log(Higheds) + 
+                       log(Seniors) + Transit + Urban + log(Vehicles) + NewParts+ 
+                       offset( log(Population) ),
+                     family = "poisson", 
+                     data = kommuner)
+
+beta <- model_nb$coefficients
+ci_beta = confint(model_nb)
 cbind(beta = beta, ci_beta) |> round(digits = 2)
 
 cbind(RR = exp(beta), exp(ci_beta)) |> round(digits = 2)
 
 nb_pred <- cbind(
   kommuner,
-  xb = predict(modele_glmnb, se.fit = TRUE))
+  xb = predict(model_nb, se.fit = TRUE))
 nb_pred |> 
   mutate(
     xb.residual.scale = NULL,
@@ -335,9 +367,9 @@ ggplot(nb_pred, aes(Fertility, Cars_nbr, color = NewParts)) +
 
 ## standardized deviance residuals ####\
 # compare with poisson
-nb_infl <- influence(modele_glmnb)
+nb_infl <- influence(model_nb)
 nb_pred |> mutate(
-  v = hatvalues(modele_glmnb),
+  v = hatvalues(model_nb),
   devres = nb_infl$dev.res,
   std.devres = devres/sqrt(1 - v)) ->
   nb_pred
@@ -369,17 +401,103 @@ ggplot(nb_pred, aes(x = xb.fit, color = NewParts)) +
   geom_hline(yintercept = c(-3, -2, 0, 2, 3), 
              linetype = 2, linewidth = 1) +
   expand_limits(y = c(-4.5, 7.5)) +
-  labs(y = "std dev.res", x = "xb", color = "program",
-       title = "Absence: Negbin model") +
+  labs(y = "std dev.res", x = "xb", color = "NewParts",
+       title = "Negative binomial regression Standardized deviance residuals") +
   theme(text = element_text(size = 18))+
   facet_wrap(~ NewParts)
+
+
+## leverage #####
+nb_pred |> mutate(v = hatvalues(model_nb)) -> nb_pred
+
+pplus1 <- length(model_nb$coefficients)
+n <- nobs(model_nb)
+
+top_leverage <- nb_pred %>%
+  arrange(desc(v)) %>%
+  slice(1:6)
+
+
+ggplot(nb_pred, aes( xb.fit , v, color = NewParts)) +
+  geom_point(size = 2) +
+  geom_point(data = top_leverage, aes(x =  xb.fit , y = v), color = "red", size = 3) +  
+  geom_text(data = top_leverage, aes(x = xb.fit , y = v, label = Kommun), vjust = -1, color = "blue") + 
+  geom_hline(yintercept = 1/n, linetype = "dashed",color = "red") +
+  geom_hline(yintercept = 2*pplus1/n, color = "red") +
+  labs(title = " Negative binomial regression Leverage",
+       color = "program", caption = "horizontal line = 2(p+1)/n") +
+  theme(text = element_text(size = 18)) +
+  facet_wrap(~ NewParts)
+
+## Cook’s D #####
+nb_pred |> mutate(D = cooks.distance(model_nb)) -> nb_pred
+
+top_cook <- nb_pred %>%
+  arrange(desc(abs(D))) %>%
+  slice(1:6)
+
+ggplot(nb_pred, aes(log(muhat), D, color = NewParts)) +
+  geom_point(size = 2) +
+  geom_point(data = top_cook, aes(x = log(muhat), y = D), color = "red", size = 3) +  
+  geom_text(data = top_cook, aes(x = log(muhat), y = D, label = Kommun), vjust = -1, color = "blue") + 
+  geom_hline(yintercept = c(4/n), color = "red") +
+  labs(title = "Negative binomial regression Cook's distance",
+       color = "program", caption = "horizontal lines = 4/n and 1") +
+  theme(text = element_text(size = 18)) +
+  facet_wrap(~ NewParts)
+
+# model_nb <- glm.nb(Cars_nbr ~  log(Apartments) + log(Builton) + log(Higheds) + 
+                #log(Seniors) + Transit + Urban + log(Vehicles) + NewParts, 
+                #offset = log(Population),
+                #data = kommuner)
+
+model_full <- glm.nb(Cars_nbr ~ llog(Apartments) + log(Builton) + log(Higheds) + log(Population) +
+                       log(Seniors) + Transit + Urban + log(Vehicles) + NewParts+offset( log(Population) ),
+                  data = kommuner)
+
+summary(model_full)
+model_full_sum <- summary(model_full)
+vif(model_full)
+
+
+model_null <- glm(Cars_nbr ~ 1, family = "poisson", data = kommuner)
+
+### AIC stepwise selection ####
+step_model_aic <- step(model_null,
+                       scope = list(lower = model_null, upper = model_full),
+                       direction = "both",
+                       trace = TRUE,  # trace=TRUE detail information for every steps
+                       k = 2)  # k=2 means using AIC
+
+summary(step_model_aic)
+aic_sum <- summary(step_model_aic)
+vif(step_model_aic)
+
+
+
+### BIC stepwise selection ####
+step_model_bic <- step(model_null,
+                       scope = list(lower = model_null, upper = model_full),
+                       direction = "both",
+                       trace = TRUE,
+                       k =  log(nobs(model_full)))  # BIC
+summary(step_model_bic)
+bic_sum <- summary(step_model_bic)
+
+#### AIC and BIC #####
+aic <- AIC(step_model_aic,step_model_bic)
+bic <- BIC(step_model_aic,step_model_bic)
+collect.AICetc <- data.frame(aic, bic)
+collect.AICetc |> mutate(df.1 = NULL) -> collect.AICetc
+collect.AICetc
+
 
 ## nb_red #####
 remove <- c("0183 Sundbyberg","1275 Perstorp","0186 Lidingö","1480 Göteborg")
 
 kommuner_ <- kommuner %>%
   filter(!Kommun %in% remove)
-nb_red <- update(modele_glmnb, data = kommuner_)
+nb_red <- update(model_nb, data = kommuner_)
 
 nb_pred_ <- cbind(
   kommuner_,
@@ -422,4 +540,17 @@ ggplot(nb_pred_, aes(x = xb.fit, color = NewParts)) +
        title = "Absence: Negbin model") +
   theme(text = element_text(size = 18))+
   facet_wrap(~ NewParts)
+
+## parts ####
+# 探究不同的part之间，分布有没有不同
+
+D_diff_red <- model_poi_red$deviance - model_nb$deviance
+D_diff_red
+
+df_diff_red <- model_poi_red$df.residual - model_nb$df.residual
+df_diff_red
+
+anova(model_poi_red, model_nb)
+qchisq(1 - 0.05, df_diff_red)
+pchisq(D_diff_red, df_diff_red, lower.tail = FALSE)
 

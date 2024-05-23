@@ -132,3 +132,52 @@ ppt <- ph_with(ppt, ft, location = ph_location_type(type = "body"))
 # 保存 PowerPoint 文件
 print(ppt, target = "Reduced_Model_Coefficients_Table.pptx")
 
+
+
+
+
+
+coefficients_data <- data.frame(
+  Variable = c("(Intercept)", "log(Apartments)", "log(Builton)", "log(Higheds)", 
+               "log(Seniors)", "Transit", "Urban", "log(Vehicles)", 
+               "NewPartsSvealandandNo", "NewPartsNorrlandandNo"),
+  Estimate = c(-4.3430775, -0.0428626, -0.0649671, -0.0214063, 
+               0.1304264, -0.0002049, 0.0009794, 0.5546852, 
+               -0.0056819, -0.1042360),
+  StdError = c(0.1692348, 0.0105524, 0.0098844, 0.0112766, 
+               0.0205683, 0.0002269, 0.0003492, 0.0264783, 
+               0.0060574, 0.0109022),
+  zValue = c(-25.663, -4.062, -6.573, -1.898, 
+             6.341, -0.903, 2.805, 20.949, 
+             -0.938, -9.561),
+  PrValue = c("< 2e-16", "4.87e-05", "4.94e-11", "0.05766", 
+              "2.28e-10", "0.36642", "0.00503", "< 2e-16", 
+              "0.34824", "< 2e-16")
+)
+
+# 创建 flextable 表格
+ft <- flextable(coefficients_data)
+ft <- autofit(ft)
+ft <- set_caption(ft, "Regression Coefficients")
+
+# 创建一个新的 PowerPoint 幻灯片
+ppt <- read_pptx()
+
+# 添加一张幻灯片
+ppt <- add_slide(ppt, layout = "Title and Content", master = "Office Theme")
+
+# 添加标题
+ppt <- ph_with(ppt, "Regression Coefficients", location = ph_location_type(type = "title"))
+
+# 添加表格到幻灯片
+ppt <- ph_with(ppt, ft, location = ph_location_type(type = "body"))
+
+# 保存 PowerPoint 文件
+print(ppt, target = "Regression_Coefficients_Table.pptx")
+
+
+
+
+
+
+
